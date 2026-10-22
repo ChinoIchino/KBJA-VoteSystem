@@ -1,0 +1,44 @@
+#!/bin/bash
+
+source newvote.sh
+source repvote.sh
+
+printHelpMain(){
+    echo -e "Available commands:\n- newvote : enter the vote creation environment\n- repvote <id of vote> : answer a vote (WIP)\n"
+}
+safeExit(){
+    echo -e "\nDETECTED NON-SAFE EXIT\nWrapping up the program, please use the exit command next time.\n"
+    #TODO Add safe exit (saving important information, etc...)
+
+    exit 0
+}
+
+# Adding a trap in case the user use, ctrl+C or another method to quit non safely
+trap safeExit INT TERM
+
+echo "------ Entering KBJA Environment ------"
+
+# trap "echo Exiting... INT;  exit $?" INT
+
+while true; do
+    read -p "KBJA> " input
+    
+    command=$(echo "$input" | awk '{print $1}')
+
+    if [ "$command" = "exit" ]; then
+        echo -e "------ Exited Successfully KBJA Environment ------\n"
+        break;
+    elif [ "$command" = "help" ]; then
+        printHelpMain
+    elif [ "$command" = "newvote" ]; then
+        newVoteEnv
+    elif [ "$command" = "aswvote" ]; then
+        possibleId=$(echo "$input" | awk -F ' ' '{print $2}')
+        repVoteEnv "$possibleId"
+    else
+        echo -e "ERROR : Command not found. Having trouble finding a command ? Try the 'help' command.\n"
+    fi
+
+
+    # echo ""
+done

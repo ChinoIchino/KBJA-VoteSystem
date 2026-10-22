@@ -1,0 +1,29 @@
+Partie en C (Probablement a effacer):
+https://stackoverflow.com/questions/26284408/how-do-you-check-if-a-variable-equals-text-in-c
+https://www.geeksforgeeks.org/c/scanf-in-c/
+https://stackoverflow.com/questions/9958000/how-does-scanf-handle-white-space
+https://koor.fr/C/cstdio/fgets.wp
+https://stackoverflow.com/questions/3217629/how-do-i-find-the-index-of-a-character-within-a-string-in-c
+https://koor.fr/C/cstring/strchr.wp
+https://www.w3schools.com/c/c_date_time.php
+
+Partie en Bash:
+https://stackoverflow.com/questions/16034749/if-elif-else-statement-issues-in-bash
+https://www.w3schools.com/bash/bash_awk.php
+https://stackoverflow.com/questions/52723293/how-to-grep-everything-between-single-quotes
+https://unix.stackexchange.com/questions/163810/grep-on-a-variable
+https://stackoverflow.com/questions/26802201/bash-get-date-and-time-from-another-time-zone
+https://stackoverflow.com/questions/16203088/bash-if-statement-with-multiple-conditions-throws-an-error
+https://stackoverflow.com/questions/15973184/if-statement-to-check-hostname-in-shell-script
+https://unix.stackexchange.com/questions/86321/how-can-i-display-the-contents-of-a-text-file-on-the-command-line
+https://linuxize.com/post/bash-functions/
+https://stackoverflow.com/questions/18706823/how-to-increment-a-date-in-a-bash-script
+https://stackoverflow.com/questions/4906579/how-to-use-bash-to-create-a-folder-if-it-doesnt-already-exist (to see again, its a interesting verification)
+https://stackoverflow.com/questions/7023025/how-do-i-declare-a-constant-in-shell-script
+https://linuxize.com/post/bash-check-if-file-exists/
+https://stackoverflow.com/questions/192292/how-best-to-include-other-scripts
+https://stackoverflow.com/questions/50614876/how-to-read-a-file-line-by-line-into-a-variable-without-a-loop
+https://stackoverflow.com/questions/4685323/bash-read-array-from-an-external-file
+https://superuser.com/questions/909314/bash-behavior-on-sigterm
+
+Pour la verification de regex: https://regex101.com/

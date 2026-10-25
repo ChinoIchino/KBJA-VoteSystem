@@ -25,5 +25,6 @@ https://stackoverflow.com/questions/192292/how-best-to-include-other-scripts
 https://stackoverflow.com/questions/50614876/how-to-read-a-file-line-by-line-into-a-variable-without-a-loop
 https://stackoverflow.com/questions/4685323/bash-read-array-from-an-external-file
 https://superuser.com/questions/909314/bash-behavior-on-sigterm
+https://www.w3schools.com/bash/bash_operators.php
 
 Pour la verification de regex: https://regex101.com/

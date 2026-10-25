@@ -18,13 +18,11 @@ trap safeExit INT TERM
 
 echo "------ Entering KBJA Environment ------"
 
-# trap "echo Exiting... INT;  exit $?" INT
-
 while true; do
     read -p "KBJA> " input
     
     command=$(echo "$input" | awk '{print $1}')
-
+    
     if [ "$command" = "exit" ]; then
         echo -e "------ Exited Successfully KBJA Environment ------\n"
         break;
@@ -32,13 +30,12 @@ while true; do
         printHelpMain
     elif [ "$command" = "newvote" ]; then
         newVoteEnv
-    elif [ "$command" = "aswvote" ]; then
+    elif [ "$command" = "repvote" ]; then
         possibleId=$(echo "$input" | awk -F ' ' '{print $2}')
         repVoteEnv "$possibleId"
+        # Override the repVoteEnv trap with the main one
+        trap safeExit INT TERM
     else
         echo -e "ERROR : Command not found. Having trouble finding a command ? Try the 'help' command.\n"
     fi
-
-
-    # echo ""
 done

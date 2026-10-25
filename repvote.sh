@@ -1,10 +1,18 @@
 #!/bin/bash
 
+# TODO Create a function for modifying previous answers
+
 readonly SHARED_FOLDER=("/home/chino/Desktop/Project/L3SystemesEtReseaux/proj/FakeSharedEnv/")
 
-# Create a function for modifying previous answers
+# If the user quit abruptly inside the answer environment, it send him back to the main one
+repSafeExit(){
+    echo -e "\nDETECTED NON-SAFE EXIT\nAll responses given won't be saved\n"
+    echo "$(date) $HOSTNAME : Quit abruptly, his answers weren't saved" >> $logFile
+}
 
-aswVoteEnv(){
+repVoteEnv(){
+    trap 'repSafeExit; return' INT TERM
+
     # There isn't any verification for what is given into the idOfVote
     # Because it SHOULDN'T BE anything else than a int
     local idOfVote="$1"
@@ -22,6 +30,10 @@ aswVoteEnv(){
         echo -e "ERROR: Vote unavailable. The vote id[$idOfVote] doesn't contain any questions.\n"
         return
     fi
+
+    logFile=("$questionFolder/Info.log")
+
+    echo "$(date) $HOSTNAME : Started answering the vote" >> $logFile
 
     # Save the Questions.txt content inside a array
     readarray -t fileArray < "$questionFile"
@@ -42,6 +54,10 @@ aswVoteEnv(){
     answersArray=()
     answersArrayCursor=0
     while (( $cursor < $sizeOfFileArray )); do
+        if [[ $forceQuit == true ]]; then
+            return;
+        fi
+
         # Get the question line
         currLine=$(echo "${fileArray[$cursor]}" | awk -F '[' '{print $2}' | awk -F ']' '{print $1}')
         
@@ -82,47 +98,91 @@ aswVoteEnv(){
             currIndex=$(echo "$currLine" | awk -F ';' '{print $1}')
         done
 
-        # oldIndex=$((currIndex))
-    
-        # cursor=$((cursor + 1))
         read -p "KBJA-asw> Answer: " input
         
-        # TODO Verify if the input is correct and save it inside Answers.txt
-        answersArray[answersArrayCursor]=$(echo "asw[$oldIndex;$input]")
-        answersArrayCursor=$((answersArrayCursor + 1))
+        # Verify if the current response is conform
+        if [[ $isMultChoice == 1 ]]; then
+            mapfile -t segmentedResponses < <(echo "$input" | awk -F ' ' '{for(i=1; i<=NF; i++) print $i}')
+            newChoices=()
+
+            # Goes by every responses given for the question
+            for currInput in "${segmentedResponses[@]}"; do
+                # echo "CurrInput : $currInput"
+                validAnswer=true
+
+                # Verify if the current answer is a number and the number is a valid answer
+                if [[ $currInput =~ ^[0-9]+$ ]] && (( $currInput > 0 && $currInput < $answerNumber )); then
+                    # Verify if the answer was not already stored
+                    for currItem in "${newChoices[@]}"; do
+                        if [[ "$currItem" == "$currInput" ]]; then
+                            validAnswer=$((false))
+                            break
+                        fi
+                    done
+                else
+                    validAnswer=$((false))
+                fi
+
+
+                # If its a new valid answer it goes into the answers
+                if [[ $validAnswer == true ]]; then
+                    # TODO delete those prints in final release
+                    # I'm keeping this print just in case
+                    # echo -e "No duplicates were found, adding it into the choices\ncurrItem=$currInput"
+                    newChoices+=("$currInput")
+                fi
+            done
+
+            # If there is at least one valid choice
+            if [[ "${#newChoices[@]}" -ge 1 ]]; then
+                # Save all the answers into the "asw[questionId;<All the answers>]" format
+                answersArray[answersArrayCursor]=$(echo "asw[$oldIndex;")
+                for chosenItem in "${newChoices[@]}"; do
+                    answersArray[answersArrayCursor]+=$(echo "$chosenItem ")
+                done
+                answersArray[answersArrayCursor]+="]"
+
+                answersArrayCursor=$((answersArrayCursor + 1))
+            else
+                echo "It isn't a correct answer! Please use spaces between multiple answers"
+
+                # Goes back to the un-answered question
+                answerNumber=$((answerNumber - 1))
+                cursor=$((cursor - 1 - $answerNumber))
+            fi
+        else
+            if [[ $input =~ ^[0-9]+$ ]] && (( input > 0 && input < $answerNumber )); then
+                answersArray[answersArrayCursor]=$(echo "asw[$oldIndex;$input]")
+                answersArrayCursor=$((answersArrayCursor + 1))
+            else
+                echo "It isn't a correct answer!"
+
+                # Goes back to the un-answered question
+                answerNumber=$((answerNumber - 1))
+                cursor=$((cursor - 1 - $answerNumber))
+            fi
+        fi
     done
 
-    echo -e "\n\nGot the answers:"
-    for list in "${answersArray[@]}"
-    do
-        for item in $list
-        do
-            echo $item
-        done
-    done
-
-
-
-    # while true; do
-    #     read -p "KBJA-asw> " input
-    #     command=$(echo "$input" | awk '{print $1}')
-
-    #     if [ "$command" = "exit" ]; then
-    #         echo -e "------ Exited successfully from KBJA-asw Environment ------\n"
-    #         break;
-    #     else
-    #          echo -e "ERROR : Command not found. Having trouble finding a command ? Try the 'help' command.\n"
-    #     fi
+    echo "$(date) $HOSTNAME : Finished answering all the questions" >> $logFile
+    
+    # TODO Delete all comments below in final product
+    # Used to verify what will be saved inside the Answers.txt
+    # echo -e "\n\nGot the answers:"
+    # for index in $(seq 0 $((answersArrayCursor))); do
+    #     echo "${answersArray[$index]}"
     # done
+    
+    # Save all the answers inside Answers.txt
+    answersFile=("$questionFolder/Answers.txt")
+    echo -e "newasw[$HOSTNAME]" >> $answersFile
+    for index in $(seq 0 $((answersArrayCursor))); do
+        echo -n "${answersArray[$index]}" >> $answersFile
+        echo "" >> $answersFile
+    done
 
-    # while IFS= read -r readLine; do
-    #     information=(echo "$readLine" | awk '[' '{print $2}')
-    #     currentId=(echo "$information" | awk ';' '{print $1}')
-    #     oldId=$((currentId))
-    #     readQuestionAnswers "$information"
+    echo -n "" >> $answersFile
 
-    #     while ( old)
+    echo -e "All the question have been answered\n------ Exited successfully from KBJA-asw environment ------\n"
 
-    #     echo "Line: $line"
-    # done < $QuestionFile
 }

@@ -15,7 +15,7 @@ printHelpNewVote(){
     - 'nq \"Are apples red ?\" -m' : Create a new question, the title need to be between quotes. The flag -m represent a question with multiple answers
     - 'na \"Depend on the variety !\" : Add an answer to the last opened question. The possible answer need to be between quotes
     - 'debugPrint' : Show every informations of the vote saved
-    - 'exit' : exit the currently made vote\n"
+    - 'exit' : exit the currently made vote"
 }
 
 newVoteEnv(){

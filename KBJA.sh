@@ -4,7 +4,9 @@ source newvote.sh
 source repvote.sh
 
 printHelpMain(){
-    echo -e "Available commands:\n- newvote : enter the vote creation environment\n- repvote <id of vote> : answer a vote (WIP)\n"
+    echo "Available commands:"
+    echo "- newvote : enter the vote creation environment"
+    echo -e "- repvote <id of vote>: answer a vote, if the vote have already been answered, modify the registered answers\n"
 }
 safeExit(){
     echo -e "\nDETECTED NON-SAFE EXIT\nWrapping up the program, please use the exit command next time.\n"
@@ -32,7 +34,8 @@ while true; do
         newVoteEnv
     elif [ "$command" = "repvote" ]; then
         possibleId=$(echo "$input" | awk -F ' ' '{print $2}')
-        repVoteEnv "$possibleId"
+        repVoteEnvMod "$possibleId"
+
         # Override the repVoteEnv trap with the main one
         trap safeExit INT TERM
     else

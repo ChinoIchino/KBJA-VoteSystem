@@ -10,12 +10,16 @@ repSafeExit(){
     echo "$(date) $HOSTNAME : Quit abruptly, his answers weren't saved" >> $logFile
 }
 
+# Append a new vote
 repVoteEnv(){
     trap 'repSafeExit; return' INT TERM
 
     # There isn't any verification for what is given into the idOfVote
     # Because it SHOULDN'T BE anything else than a int
     local idOfVote="$1"
+
+    local offset="$2"
+    echo "Got offset='$offset'"
 
     # Save the path to the folder inside questionFolder and verify if it exist
     questionFolder=("$SHARED_FOLDER/Vote-$idOfVote")
@@ -33,7 +37,11 @@ repVoteEnv(){
 
     logFile=("$questionFolder/Info.log")
 
-    echo "$(date) $HOSTNAME : Started answering the vote" >> $logFile
+    if [[ "$offset" == "" ]]; then
+        echo "$(date) $HOSTNAME : Started answering the vote" >> $logFile
+    else
+        echo "$(date) $HOSTNAME : Started modifying his answers" >> $logFile
+    fi
 
     # Save the Questions.txt content inside a array
     readarray -t fileArray < "$questionFile"
@@ -43,13 +51,6 @@ repVoteEnv(){
     echo -e "Got the amm of line of the array: $sizeOfFileArray"
 
     echo -e "\n------ Entering KBJA-rep Environment ------"
-
-    # currLine=$(echo "${fileArray[$cursor]}" | awk -F '[' '{print $2}' | awk -F ']' '{print $1}')
-    # isMultChoice=$(echo "$currLine" | awk -F ';' '{print $3}')
-    # currIndex=$(echo "$currLine" | awk -F ';' '{print $1}')
-    # oldIndex=$((currIndex))
-
-    # echo -e "Got the information\ncurrLine=$currLine\ncurrIndex=$currIndex\noldIndex=$oldIndex\n" 
 
     answersArray=()
     answersArrayCursor=0
@@ -175,14 +176,80 @@ repVoteEnv(){
     
     # Save all the answers inside Answers.txt
     answersFile=("$questionFolder/Answers.txt")
-    echo -e "newasw[$HOSTNAME]" >> $answersFile
-    for index in $(seq 0 $((answersArrayCursor))); do
-        echo -n "${answersArray[$index]}" >> $answersFile
-        echo "" >> $answersFile
-    done
 
+    # If a offset wasn't given, then its the first time the user is answering to the vote
+    if [[ "$offset" == "" ]]; then
+        echo -e "newasw[$HOSTNAME]" >> $answersFile
+        for index in $(seq 0 $((answersArrayCursor))); do
+            echo -n "${answersArray[$index]}" >> $answersFile
+            echo "" >> $answersFile
+        done
+    else
+        # Taking the content of the Answers.txt file
+        aswFileContent=$(less $answersFile)
+        # Segmenting it into a array
+        mapfile -t aswFileSegmented < <(echo "$aswFileContent" | awk -F '\n' '{for(i=1; i<=NF; i++) print $i}')
+
+        for index in $(seq 0 $((answersArrayCursor))); do
+            offset=$((offset + 1))
+            aswFileSegmented[$offset]="${answersArray[$index]}"
+        done
+        # Needed to use a printf because i would have been searching a alternative for a eternity
+        printf "%s\n" "${aswFileSegmented[@]}">$answersFile
+    fi
     echo -n "" >> $answersFile
 
     echo -e "All the question have been answered\n------ Exited successfully from KBJA-asw environment ------\n"
 
+}
+
+# Verify if the user have already responded to the vote or no.
+# Both possibility will call repVoteEnv() after verifying.
+# If the user had already registered answers to the vote, the new responses will override the old ones.
+repVoteEnvMod(){
+    local idOfVote="$1"
+
+    # Save the path to the folder inside questionFolder and verify if it exist
+    questionFolder=("$SHARED_FOLDER/Vote-$idOfVote")
+    if [ ! -e "$questionFolder" ]; then
+        echo -e "ERROR: Vote unavailable. Id[$idOfVote] wasn't found\n"
+        return
+    fi
+
+    # Save the path to the questions file and verify if it exist
+    questionFile=("$questionFolder/Questions.txt")
+    if [ ! -e "$questionFile" ]; then
+        echo -e "ERROR: Vote unavailable. The vote id[$idOfVote] doesn't contain any questions.\n"
+        return
+    fi
+
+    # Save the path to the answers file and verify if it exist
+    answersFile=("$questionFolder/Answers.txt")
+    if [ ! -e "$answersFile" ]; then
+        repVoteEnv "$idOfVote"
+        return
+    fi
+
+    readarray -t fileArray < "$answersFile"
+    sizeOfFileArray="${#fileArray[@]}"
+    cursor=0
+
+    while (( $cursor < $sizeOfFileArray )); do
+        currLine=$(echo "${fileArray[$cursor]}" | awk -F '[' '{print $1}')
+        if [[ "$currLine" == "newasw" ]]; then
+            currUser=$(echo "${fileArray[$cursor]}" | awk -F '[' '{print $2}' | awk -F ']' '{print $1}')
+            # echo "About to compare $currUser == $HOSTNAME"
+            if [[ "$currUser" == "$HOSTNAME" ]]; then
+                break
+            fi
+        fi
+        cursor=$((cursor + 1))
+    done
+
+    if [[ "$cursor" == "$sizeOfFileArray" ]]; then
+        repVoteEnv "$idOfVote"
+    else
+        echo "You have already answered this vote, the new answers will override the old ones."
+        repVoteEnv "$idOfVote" "$cursor"
+    fi
 }

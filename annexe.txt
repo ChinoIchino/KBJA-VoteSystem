@@ -26,5 +26,7 @@ https://stackoverflow.com/questions/50614876/how-to-read-a-file-line-by-line-int
 https://stackoverflow.com/questions/4685323/bash-read-array-from-an-external-file
 https://superuser.com/questions/909314/bash-behavior-on-sigterm
 https://www.w3schools.com/bash/bash_operators.php
+https://unix.stackexchange.com/questions/340440/bash-test-what-does-do
+https://stackoverflow.com/questions/14116748/need-to-assign-the-contents-of-a-text-file-to-a-variable-in-a-bash-script
 
 Pour la verification de regex: https://regex101.com/

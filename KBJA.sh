@@ -2,11 +2,13 @@
 
 source newvote.sh
 source repvote.sh
+source editvote.sh
 
 printHelpMain(){
     echo "Available commands:"
     echo "- newvote : enter the vote creation environment"
-    echo -e "- repvote <id of vote>: answer a vote, if the vote have already been answered, modify the registered answers\n"
+    echo "- repvote <id of vote>: answer a vote, if the vote have already been answered, modify the registered answers"
+    echo -e "- editvote <id of vote>: edit a previously created vote, only the author is authorized to do so (WIP)\n"
 }
 safeExit(){
     echo -e "\nDETECTED NON-SAFE EXIT\nWrapping up the program, please use the exit command next time.\n"
@@ -38,6 +40,9 @@ while true; do
 
         # Override the repVoteEnv trap with the main one
         trap safeExit INT TERM
+    elif [ "$command" = "editvote" ]; then
+        possibleId=$(echo "$input" | awk -F ' ' '{print $2}')
+        editVoteEnv "$possibleId"
     else
         echo -e "ERROR : Command not found. Having trouble finding a command ? Try the 'help' command.\n"
     fi

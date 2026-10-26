@@ -2,7 +2,8 @@
 
 # TODO Create a function for modifying previous answers
 
-readonly SHARED_FOLDER=("/home/chino/Desktop/Project/L3SystemesEtReseaux/proj/FakeSharedEnv/")
+# Needed to call it something else than SHARED_FOLDER, because the var name is already used inside editvote.sh
+readonly SHARED_FOLDER_REP=("/home/chino/Desktop/Project/L3SystemesEtReseaux/proj/FakeSharedEnv/")
 
 # If the user quit abruptly inside the answer environment, it send him back to the main one
 repSafeExit(){
@@ -22,7 +23,7 @@ repVoteEnv(){
     echo "Got offset='$offset'"
 
     # Save the path to the folder inside questionFolder and verify if it exist
-    questionFolder=("$SHARED_FOLDER/Vote-$idOfVote")
+    questionFolder=("$SHARED_FOLDER_REP/Vote-$idOfVote")
     if [ ! -e "$questionFolder" ]; then
         echo -e "ERROR: Vote unavailable. Id[$idOfVote] wasn't found\n"
         return
@@ -210,7 +211,7 @@ repVoteEnvMod(){
     local idOfVote="$1"
 
     # Save the path to the folder inside questionFolder and verify if it exist
-    questionFolder=("$SHARED_FOLDER/Vote-$idOfVote")
+    questionFolder=("$SHARED_FOLDER_REP/Vote-$idOfVote")
     if [ ! -e "$questionFolder" ]; then
         echo -e "ERROR: Vote unavailable. Id[$idOfVote] wasn't found\n"
         return

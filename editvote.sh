@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#TODO implement a safe exit trap
+
 readonly SHARED_FOLDER=("/home/chino/Desktop/Project/L3SystemesEtReseaux/proj/FakeSharedEnv/")
 
 printHelpEditVote(){
@@ -8,7 +10,7 @@ printHelpEditVote(){
     echo "- moda [id of question] [id of answer] \"Depend on the maturity\" : Modify the answer to a question, the order of the answers are from top to bottom, the new answer need to be between quotes (WIP)"
     echo "- modexp [New deadline in days] : Change the expiration date to which other users can answer to this vote. It add the given ammount of days to today's date (WIP)"
     echo "- rmq [id of question] : Remove the question with the given id (WIP)"
-    echo "- rma [id of question] [id of answer] : Delete the answer to a question, the order of the answers are from top to bottom (WIP)"
+    echo "- rma [id of question] [id of answer] : Delete the answer to a question, the order of the answers are from top to bottom"
     echo -e "- ls : Display all informations about the questions and answers inside the current vote\n"
 }
 
@@ -81,8 +83,6 @@ editVoteEnv(){
     sizeOfFileArray="${#logFileArray[@]}"
     cursor=0
 
-    # Ex to find : Author[chino-ASUS-Vivobook-S-16-M5606KA-M5606KA;Chino]
-
     while (( $cursor < $sizeOfFileArray )); do
         currItem=$(echo "${logFileArray[$cursor]})")
         if echo "$currItem" | grep -Eq 'Author.*'; then
@@ -103,6 +103,8 @@ editVoteEnv(){
         return
     fi
 
+    echo "Author entered the edit environment at $(date)" >> $logFile
+
     echo -e "\n------ Entering KBJA-edit Environment ------"
 
     while true; do
@@ -110,8 +112,7 @@ editVoteEnv(){
         command=$(echo "$input" | awk '{print $1}')
 
         if [ "$command" == "exit" ]; then
-            # echo "Quit_Edit_Environment[$HOSTNAME;$(date)]" >> $LOG_FILE TODO add all logfile addons
-            
+            echo "Author quit the edit environment at $(date)" >> $logFile
             echo -e "------ Exited successfully from KBJA-edit environment ------\n"
             break;
         elif [ "$command" == "help" ]; then
@@ -131,8 +132,83 @@ editVoteEnv(){
             echo "WIP"
             #TODO Implement
         elif [ "$command" == "rma" ]; then
-            echo "WIP"
-            #TODO Implement
+            validCommand=true
+
+            idOfQuestion=$(echo "$input" | awk -F ' ' '{print $2}')
+            idOfAnswer=$(echo "$input" | awk -F ' ' '{print $3}')
+
+            if [[ ! "$idOfQuestion" =~ ^[0-9]+$ ]]; then
+                echo -e "ERROR: The question id '$idOfQuestion' is not a valid value.\n"
+                validCommand=false
+            fi
+
+            if [[ ! "$idOfAnswer" =~ ^[0-9]+$ && $validCommand == true ]]; then
+                echo -e "ERROR: The answer id '$idOfAnswer' is not a valid value.\n"
+                validCommand=false
+            fi
+
+            if [[ $validCommand == true ]]; then
+                mapfile -t questionFileSegmented < "$questionFile"
+                sizeOfFileArray="${#questionFileSegmented[@]}"
+                cursor=0
+                
+                currAswIndex=-1
+
+                validCommand=false
+
+                # Goes to the question id given
+                while (( $cursor < $sizeOfFileArray )); do
+                    currLine=$(echo "${questionFileSegmented[$cursor]}" | awk -F '[' '{print $1}')
+                    
+                    # If its a question increment the question index
+                    if [[ "$currLine" == "nq" ]]; then
+                        currAswIndex=$((currAswIndex + 1))
+                        # If the question index is equal to the given id, it break the while loop that search inside the file
+                        if [[ "$currAswIndex" == "$idOfQuestion" ]]; then
+                            validCommand=true
+                            break
+                        fi
+                    fi
+
+                    cursor=$((cursor + 1))
+                done
+
+                if [[ $validCommand == false ]]; then
+                    echo -e "ERROR: The question id wasn't found, please enter a valid question id.\n"
+                fi
+
+                if [[ $validCommand == true ]]; then
+                    # Verify if the answer id don't leak into another question
+                    for (( i=0; i<=$idOfAnswer; i++ ));do
+                        currLine=$(echo "${questionFileSegmented[$((cursor + i + 1))]}" | awk -F '[' '{print $1}')
+
+                        # If in the next indexes there is a question, then it has leaked
+                        if [[ "$currLine" == "nq" ]]; then
+                            echo -e "ERROR : The id of the answer have leaked into another question, please enter a valid answer id.\n"
+                            validCommand=false
+                            break
+                        fi
+
+                        if [[ "$i" == "$idOfAnswer" ]]; then
+                            cursor=$((cursor + i + 1))
+                        fi                    
+                    done
+                fi
+
+                # If the answer id didnt leak, delete the answer, and fix the file
+                if [[ $validCommand == true ]]; then
+                    #Override the current index with the next one to "delete" the unwanted answer
+                    while (( $cursor <= $sizeOfFileArray )); do
+                        questionFileSegmented[$cursor]="${questionFileSegmented[$((cursor + 1))]}"
+                        cursor=$((cursor + 1))    
+                    done
+                
+                    echo "$(date) $HOSTNAME : Modified the vote with the command 'rma $idOfQuestion $idOfAnswer'" >> $logFile
+
+                    #Override the current file with the modified one
+                    printf "%s\n" "${questionFileSegmented[@]}">$questionFile
+                fi
+            fi
         else
             echo -e "ERROR : Command not found. Having trouble finding a command ? Try the 'help' command.\n"
         fi

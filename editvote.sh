@@ -14,6 +14,11 @@ printHelpEditVote(){
     echo -e "- ls : Display all informations about the questions and answers inside the current vote\n"
 }
 
+editSafeExit(){
+    echo -e "\nDETECTED NON-SAFE EXIT\nAll edit made have been saved\n"
+    echo "Quit abruptly, the edit environment at $(date)" >> $logFile
+}
+
 # Display all the question of the current vote, with a user friendly display
 printQuestionsClean(){
     local questionFile="$1"
@@ -105,6 +110,8 @@ editVoteEnv(){
 
     echo "Author entered the edit environment at $(date)" >> $logFile
 
+    trap 'editSafeExit; return' INT TERM
+
     echo -e "\n------ Entering KBJA-edit Environment ------"
 
     while true; do
@@ -129,8 +136,104 @@ editVoteEnv(){
             echo "WIP"
             #TODO Implement
         elif [ "$command" == "rmq" ]; then
-            echo "WIP"
-            #TODO Implement
+            validCommand=true
+
+            idOfQuestion=$(echo "$input" | awk -F ' ' '{print $2}')
+
+            if [[ ! "$idOfQuestion" =~ ^[0-9]+$ ]]; then
+                echo -e "ERROR: The question id '$idOfQuestion' is not a valid value.\n"
+                validCommand=false
+            fi
+
+            if [[ $validCommand == true ]]; then
+                mapfile -t questionFileSegmented < "$questionFile"
+                sizeOfFileArray="${#questionFileSegmented[@]}"
+                cursor=0
+                
+                currAswIndex=-1
+
+                validCommand=false
+
+                # Goes to the question id given
+                while (( $cursor < $sizeOfFileArray )); do
+                    currLine=$(echo "${questionFileSegmented[$cursor]}" | awk -F '[' '{print $1}')
+                    
+                    # If its a question increment the question index
+                    if [[ "$currLine" == "nq" ]]; then
+                        currAswIndex=$((currAswIndex + 1))
+                        # If the question index is equal to the given id, it break the while loop that search inside the file
+                        if [[ "$currAswIndex" == "$idOfQuestion" ]]; then
+                            validCommand=true
+                            break
+                        fi
+                    fi
+
+                    cursor=$((cursor + 1))
+                done
+            fi
+
+            if [[ $validCommand == true ]]; then
+                ammountOfAnswers=0
+                tempCursor=$((cursor + 1))
+
+                # Look at how much answer the question have
+                while (( $tempCursor < $sizeOfFileArray )); do
+                    # echo "Got tempC=$tempCursor"
+                    currLine=$(echo "${questionFileSegmented[$tempCursor]}" | awk -F '[' '{print $1}')
+                    # echo "Got currLine=$currLine"
+                    
+                    if [[ "$currLine" == "na" ]]; then
+                        ammountOfAnswers=$((ammountOfAnswers + 1))
+                    else
+                        break
+                    fi
+
+                    tempCursor=$((tempCursor + 1))
+                done
+
+                # echo "Found the ammount of answers = $ammountOfAnswers"
+                # Moves all lines after the question to delete on top of it
+                while (( "$cursor + $ammountOfAnswers" < $sizeOfFileArray )); do
+                    nextIndex=$((cursor + ammountOfAnswers + 1))
+                    # echo "Got cursor=$cursor/asw=$ammountOfAnswers/nextIndex=$nextIndex"
+                    # echo "About to change : '${questionFileSegmented[$cursor]}' -> '${questionFileSegmented[$nextIndex]}'"
+                    questionFileSegmented[$cursor]="${questionFileSegmented[$nextIndex]}"
+
+                    cursor=$((cursor + 1))
+                done
+
+                # Save everything inside the file
+                printf "%s\n" "${questionFileSegmented[@]}">$questionFile
+                # Cut off the part that was moved but not overwritten
+                sed -i "${cursor},\$d" "$questionFile"
+
+                # TODO Maybe do whats written under
+                # There is probably a better way to do that, by formating while overriding
+                # the lines in the while loop above, but its almost 11 pm and can't be asked 
+                # to find something like that 
+                mapfile -t fileToFormat < "$questionFile"
+                
+                cursor=0
+                currId=-1
+                sizeOfFileArray="${#fileToFormat[@]}"
+                while (( $cursor < $sizeOfFileArray )); do
+                    currCommand=$(echo "${fileToFormat[$cursor]}" | awk -F '[' '{print $1}')
+
+                    if [[ "$currCommand" == "nq" ]]; then
+                        currId=$((currId + 1))
+                    fi
+
+                    fileToFormat[$cursor]=$(echo "${fileToFormat[$cursor]}" | awk -v newId="$currId" '{sub(/\[[0-9]+;/, "[" newId ";"); print;}')
+                    cursor=$((cursor + 1))
+                done
+
+                printf "%s\n" "${fileToFormat[@]}">$questionFile
+                
+            else
+                echo -e "ERROR: The question id wasn't found, please enter a valid question id.\n"
+            fi
+
+
         elif [ "$command" == "rma" ]; then
             validCommand=true
 

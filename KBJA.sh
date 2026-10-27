@@ -43,6 +43,8 @@ while true; do
     elif [ "$command" = "editvote" ]; then
         possibleId=$(echo "$input" | awk -F ' ' '{print $2}')
         editVoteEnv "$possibleId"
+        
+        trap safeExit INT TERM
     else
         echo -e "ERROR : Command not found. Having trouble finding a command ? Try the 'help' command.\n"
     fi

@@ -109,6 +109,11 @@ editVoteEnv(){
         return
     fi
 
+    if [ -s $questionFolder/Answers.txt ]; then
+        echo -e "ERROR: Someone have already answered this vote. It is not possible anymore to edit it.\n"
+        return
+    fi
+
     echo "Author entered the edit environment at $(date)" >> $logFile
 
     trap 'editSafeExit; return' INT TERM

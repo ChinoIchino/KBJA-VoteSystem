@@ -166,6 +166,7 @@ repVoteEnv(){
         fi
     done
 
+
     echo "$(date) $HOSTNAME : Finished answering all the questions" >> $logFile
     
     # TODO Delete all comments below in final product
@@ -181,9 +182,8 @@ repVoteEnv(){
     # If a offset wasn't given, then its the first time the user is answering to the vote
     if [[ "$offset" == "" ]]; then
         echo -e "newasw[$HOSTNAME]" >> $answersFile
-        for index in $(seq 0 $((answersArrayCursor))); do
-            echo -n "${answersArray[$index]}" >> $answersFile
-            echo "" >> $answersFile
+        for index in $(seq 0 $((answersArrayCursor - 1))); do
+            echo -n -e "${answersArray[$index]}\n" >> $answersFile
         done
     else
         # Taking the content of the Answers.txt file
@@ -191,14 +191,13 @@ repVoteEnv(){
         # Segmenting it into a array
         mapfile -t aswFileSegmented < <(echo "$aswFileContent" | awk -F '\n' '{for(i=1; i<=NF; i++) print $i}')
 
-        for index in $(seq 0 $((answersArrayCursor))); do
+        for index in $(seq 0 $((answersArrayCursor - 1))); do
             offset=$((offset + 1))
             aswFileSegmented[$offset]="${answersArray[$index]}"
         done
         # Needed to use a printf because i would have been searching a alternative for a eternity
         printf "%s\n" "${aswFileSegmented[@]}">$answersFile
     fi
-    echo -n "" >> $answersFile
 
     echo -e "All the question have been answered\n------ Exited successfully from KBJA-asw environment ------\n"
 

@@ -20,7 +20,7 @@ repVoteEnv(){
     local idOfVote="$1"
 
     local offset="$2"
-    echo "Got offset='$offset'"
+    # echo "Got offset='$offset'"
 
     # Save the path to the folder inside questionFolder and verify if it exist
     questionFolder=("$SHARED_FOLDER_REP/Vote-$idOfVote")
@@ -49,7 +49,7 @@ repVoteEnv(){
     sizeOfFileArray="${#fileArray[@]}"
     cursor=0
 
-    echo -e "Got the amm of line of the array: $sizeOfFileArray"
+    # echo -e "Got the amm of line of the array: $sizeOfFileArray"
 
     echo -e "\n------ Entering KBJA-rep Environment ------"
 
@@ -213,6 +213,27 @@ repVoteEnvMod(){
     questionFolder=("$SHARED_FOLDER_REP/Vote-$idOfVote")
     if [ ! -e "$questionFolder" ]; then
         echo -e "ERROR: Vote unavailable. Id[$idOfVote] wasn't found\n"
+        return
+    fi
+
+    logFile=("$questionFolder/Info.log")
+    
+    mapfile -t logFileSegmented < "$logFile"
+    sizeOfFileArray="${#logFileSegmented[@]}"
+    cursor=0
+    
+    while (( $cursor < $sizeOfFileArray )); do
+        currLine=$(echo "${logFileSegmented[$cursor]}")
+        if echo "$currLine" | grep -Eq 'Expiration date:.*'; then
+            expDate=$(echo "$currLine" | awk -F ' ' '{print $3}')
+            # echo "Found expDate:$expDate"
+            break
+        fi
+        cursor=$((cursor + 1))
+    done
+
+    if [[ $(date +%d-%m-%Y) > $expDate ]]; then
+        echo -e "ERROR: Vote has expired. It was available until $expDate midnight.\n"
         return
     fi
 

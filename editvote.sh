@@ -262,7 +262,7 @@ editVoteEnv(){
                 ammDays=$(echo "$input" | awk -F ' ' '{print $2}')
 
                 mapfile -t logFileSegmented < "$logFile"
-                sizeOfFileArray="${#questionFileSegmented[@]}"
+                sizeOfFileArray="${#logFileSegmented[@]}"
                 cursor=0
 
                 while (( $cursor < $sizeOfFileArray )); do

@@ -8,7 +8,7 @@ printHelpMain(){
     echo "Available commands:"
     echo "- newvote : enter the vote creation environment"
     echo "- repvote <id of vote>: answer a vote, if the vote have already been answered, modify the registered answers"
-    echo -e "- editvote <id of vote>: edit a previously created vote, only the author is authorized to do so (WIP)\n"
+    echo -e "- editvote <id of vote>: edit a previously created vote, only the author is authorized to do so\n"
 }
 safeExit(){
     echo -e "\nDETECTED NON-SAFE EXIT\nWrapping up the program, please use the exit command next time.\n"

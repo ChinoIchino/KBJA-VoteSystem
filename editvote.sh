@@ -1,21 +1,22 @@
 #!/bin/bash
 
-#TODO implement a safe exit trap
+#TODO add all the logs mod
+#TODO Verify if someone answered already the question. If yes, stop the modifications with a error message
 
 readonly SHARED_FOLDER=("/home/chino/Desktop/Project/L3SystemesEtReseaux/proj/FakeSharedEnv/")
 
 printHelpEditVote(){
     echo "Possible commands:"
-    echo "- modq [id of question] \"Are apples green ?\" : Modify the question with the id given, the new question need to be between quotes (WIP)"
-    echo "- moda [id of question] [id of answer] \"Depend on the maturity\" : Modify the answer to a question, the order of the answers are from top to bottom, the new answer need to be between quotes (WIP)"
+    echo "- modq [id of question] \"Are apples green ?\" : Modify the question with the id given, the new question need to be between quotes"
+    echo "- moda [id of question] [id of answer] \"Depend on the maturity\" : Modify the answer to a question, the order of the answers are from top to bottom, the new answer need to be between quotes"
     echo "- modexp [New deadline in days] : Change the expiration date to which other users can answer to this vote. It add the given ammount of days to today's date (WIP)"
-    echo "- rmq [id of question] : Remove the question with the given id (WIP)"
+    echo "- rmq [id of question] : Remove the question with the given id"
     echo "- rma [id of question] [id of answer] : Delete the answer to a question, the order of the answers are from top to bottom"
     echo -e "- ls : Display all informations about the questions and answers inside the current vote\n"
 }
 
 editSafeExit(){
-    echo -e "\nDETECTED NON-SAFE EXIT\nAll edit made have been saved\n"
+    echo -e "\nDETECTED NON-SAFE EXIT\nAll edits made have been saved\n"
     echo "Quit abruptly, the edit environment at $(date)" >> $logFile
 }
 
@@ -127,14 +128,153 @@ editVoteEnv(){
         elif [ "$command" == "ls" ]; then
             printQuestionsClean "$questionFile"
         elif [ "$command" == "modq" ]; then
-            echo "WIP"
-            #TODO Implement
+            validCommand=true
+
+            if ! echo "$input" | grep -Eq 'modq[[:space:]][0-9]+[[:space:]]".*"'; then
+                echo -e "ERROR: The command syntax isn't correct. Please use it like that : modq <id of question> \"The new question\"\n"
+                validCommand=false
+            fi
+
+            idOfQuestion=$(echo "$input" | awk -F ' ' '{print $2}')
+
+            if [[ $validCommand == true ]]; then
+                newQuestion=$(echo "$input" | awk -F '"' '{print $2}')
+
+                mapfile -t questionFileSegmented < "$questionFile"
+                sizeOfFileArray="${#questionFileSegmented[@]}"
+                cursor=0
+                
+                currAswIndex=-1
+
+                validCommand=false
+
+                # Goes to the question id given
+                while (( $cursor < $sizeOfFileArray )); do
+                    currLine=$(echo "${questionFileSegmented[$cursor]}" | awk -F '[' '{print $1}')
+                    
+                    # If its a question increment the question index
+                    if [[ "$currLine" == "nq" ]]; then
+                        currAswIndex=$((currAswIndex + 1))
+                        # If the question index is equal to the given id, it break the while loop that search inside the file
+                        if [[ "$currAswIndex" == "$idOfQuestion" ]]; then
+                            validCommand=true
+                            break
+                        fi
+                    fi
+
+                    cursor=$((cursor + 1))
+                done
+            fi
+
+            # If the question and answer id were found, modify the values at cursor
+            if [[ $validCommand == true ]]; then
+                questionFileSegmented[$cursor]=$(echo "${questionFileSegmented[$cursor]}" | awk -v newQuestion="$newQuestion" '{sub(/;.*;/, ";" newQuestion ";"); print;}')
+                printf "%s\n" "${questionFileSegmented[@]}">$questionFile
+
+                echo "$(date) Modified a question with the command : modq $idOfQuestion \"$newQuestion\"" >> $logFile
+            else
+                echo -e "ERROR: The question id wasn't found, please enter a valid question id.\n"
+            fi
         elif [ "$command" == "moda" ]; then
-            echo "WIP"
-            #TODO Implement
+            validCommand=true
+
+            if ! echo "$input" | grep -Eq 'moda[[:space:]][0-9]+[[:space:]][0-9]+[[:space:]]".*"'; then
+                echo -e "ERROR: The command syntax isn't correct. Please use it like that : moda <id of question> <id of answer> \"The new answer\"\n"
+                validCommand=false
+            fi
+
+            idOfQuestion=$(echo "$input" | awk -F ' ' '{print $2}')
+            idOfAnswer=$(echo "$input" | awk -F ' ' '{print $3}')
+
+            if [[ $validCommand == true ]]; then
+                newAnswer=$(echo "$input" | awk -F '"' '{print $2}')
+                # echo "Got newAnswer='$newAnswer'"
+
+                mapfile -t questionFileSegmented < "$questionFile"
+                sizeOfFileArray="${#questionFileSegmented[@]}"
+                cursor=0
+                
+                currAswIndex=-1
+
+                validCommand=false
+
+                # Goes to the question id given
+                while (( $cursor < $sizeOfFileArray )); do
+                    currLine=$(echo "${questionFileSegmented[$cursor]}" | awk -F '[' '{print $1}')
+                    
+                    # If its a question increment the question index
+                    if [[ "$currLine" == "nq" ]]; then
+                        currAswIndex=$((currAswIndex + 1))
+                        # If the question index is equal to the given id, it break the while loop that search inside the file
+                        if [[ "$currAswIndex" == "$idOfQuestion" ]]; then
+                            validCommand=true
+                            break
+                        fi
+                    fi
+
+                    cursor=$((cursor + 1))
+                done
+
+                if [[ $validCommand == true ]]; then
+                    # Verify if the answer id don't leak into another question
+                    for (( i=0; i<=$idOfAnswer; i++ ));do
+                        currLine=$(echo "${questionFileSegmented[$((cursor + i + 1))]}" | awk -F '[' '{print $1}')
+
+                        # If in the next indexes there is a question, then it has leaked
+                        if [[ "$currLine" == "nq" ]]; then
+                            echo -e "ERROR : The id of the answer have leaked into another question, please enter a valid answer id.\n"
+                            validCommand=false
+                            break
+                        fi
+
+                        if [[ "$i" == "$idOfAnswer" ]]; then
+                            cursor=$((cursor + i + 1))
+                        fi                    
+                    done
+                else
+                    echo -e "ERROR: The question id wasn't found, please enter a valid question id.\n"
+                fi
+
+                # If the question and answer id were found, modify the values at cursor
+                if [[ $validCommand == true ]]; then
+                    # echo -e "About to modify the line, cursor=$cursor\nThen new line: '${questionFileSegmented[$cursor]}'"
+                    questionFileSegmented[$cursor]=$(echo "${questionFileSegmented[$cursor]}" | awk -v newAsw="$newAnswer" '{sub(/;.*]/, ";" newAsw "]"); print;}')
+                    # echo "The new line:'${questionFileSegmented[$cursor]}'"
+                    printf "%s\n" "${questionFileSegmented[@]}">$questionFile
+
+                    echo "$(date) Modified a answer with the command : moda $idOfQuestion $idOfAnswer \"$newAnswer\"" >> $logFile
+                fi
+            fi
         elif [ "$command" == "modexp" ]; then
-            echo "WIP"
-            #TODO Implement
+            validCommand=true
+
+            if ! echo "$input" | grep -Eq '^modexp[[:space:]][0-9]+$'; then
+                validCommand=false
+                echo -e "ERROR: The command syntax isn't correct. Please it like that: modexp <ammount of days from today>\n"
+            fi
+
+            if [[ "$validCommand" == "true" ]]; then
+                ammDays=$(echo "$input" | awk -F ' ' '{print $2}')
+
+                mapfile -t logFileSegmented < "$logFile"
+                sizeOfFileArray="${#questionFileSegmented[@]}"
+                cursor=0
+
+                while (( $cursor < $sizeOfFileArray )); do
+                    currLine=$(echo "${logFileSegmented[$cursor]}")
+                    if echo "$currLine" | grep -Eq 'Expiration date:.*'; then
+                        echo "Found the line : '$currLine'"
+                        break
+                    fi
+                    cursor=$((cursor + 1))
+                done
+
+                newExpirationDate=$(date +%d-%m-%Y -d "$(date) + $ammDays day")
+                logFileSegmented[$cursor]=$(echo "Expiration date: $newExpirationDate")
+                printf "%s\n" "${logFileSegmented[@]}">$logFile
+
+                echo "$(date) Modified the expiration date with the command : modexp $ammDays" >> $logFile
+            fi
         elif [ "$command" == "rmq" ]; then
             validCommand=true
 
@@ -229,6 +369,7 @@ editVoteEnv(){
 
                 printf "%s\n" "${fileToFormat[@]}">$questionFile
                 
+                echo "$(date) Removed a question with the command : rmq $idOfQuestion" >> $logFile
             else
                 echo -e "ERROR: The question id wasn't found, please enter a valid question id.\n"
             fi
@@ -305,11 +446,11 @@ editVoteEnv(){
                         questionFileSegmented[$cursor]="${questionFileSegmented[$((cursor + 1))]}"
                         cursor=$((cursor + 1))    
                     done
-                
-                    echo "$(date) $HOSTNAME : Modified the vote with the command 'rma $idOfQuestion $idOfAnswer'" >> $logFile
 
                     #Override the current file with the modified one
                     printf "%s\n" "${questionFileSegmented[@]}">$questionFile
+
+                    echo "$(date) Removed a answer with the command : rma $idOfQuestion $idOfAnswer" >> $logFile
                 fi
             fi
         else

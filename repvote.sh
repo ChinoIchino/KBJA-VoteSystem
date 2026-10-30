@@ -2,7 +2,8 @@
 
 # TODO Create a function for modifying previous answers
 
-readonly SHARED_FOLDER=("/home/chino/Desktop/Project/L3SystemesEtReseaux/proj/FakeSharedEnv/")
+# Needed to call it something else than SHARED_FOLDER, because the var name is already used inside editvote.sh
+readonly SHARED_FOLDER_REP=("/home/chino/Desktop/Project/L3SystemesEtReseaux/proj/FakeSharedEnv/")
 
 # If the user quit abruptly inside the answer environment, it send him back to the main one
 repSafeExit(){
@@ -19,10 +20,10 @@ repVoteEnv(){
     local idOfVote="$1"
 
     local offset="$2"
-    echo "Got offset='$offset'"
+    # echo "Got offset='$offset'"
 
     # Save the path to the folder inside questionFolder and verify if it exist
-    questionFolder=("$SHARED_FOLDER/Vote-$idOfVote")
+    questionFolder=("$SHARED_FOLDER_REP/Vote-$idOfVote")
     if [ ! -e "$questionFolder" ]; then
         echo -e "ERROR: Vote unavailable. Id[$idOfVote] wasn't found\n"
         return
@@ -48,7 +49,7 @@ repVoteEnv(){
     sizeOfFileArray="${#fileArray[@]}"
     cursor=0
 
-    echo -e "Got the amm of line of the array: $sizeOfFileArray"
+    # echo -e "Got the amm of line of the array: $sizeOfFileArray"
 
     echo -e "\n------ Entering KBJA-rep Environment ------"
 
@@ -165,6 +166,7 @@ repVoteEnv(){
         fi
     done
 
+
     echo "$(date) $HOSTNAME : Finished answering all the questions" >> $logFile
     
     # TODO Delete all comments below in final product
@@ -180,9 +182,8 @@ repVoteEnv(){
     # If a offset wasn't given, then its the first time the user is answering to the vote
     if [[ "$offset" == "" ]]; then
         echo -e "newasw[$HOSTNAME]" >> $answersFile
-        for index in $(seq 0 $((answersArrayCursor))); do
-            echo -n "${answersArray[$index]}" >> $answersFile
-            echo "" >> $answersFile
+        for index in $(seq 0 $((answersArrayCursor - 1))); do
+            echo -n -e "${answersArray[$index]}\n" >> $answersFile
         done
     else
         # Taking the content of the Answers.txt file
@@ -190,14 +191,13 @@ repVoteEnv(){
         # Segmenting it into a array
         mapfile -t aswFileSegmented < <(echo "$aswFileContent" | awk -F '\n' '{for(i=1; i<=NF; i++) print $i}')
 
-        for index in $(seq 0 $((answersArrayCursor))); do
+        for index in $(seq 0 $((answersArrayCursor - 1))); do
             offset=$((offset + 1))
             aswFileSegmented[$offset]="${answersArray[$index]}"
         done
         # Needed to use a printf because i would have been searching a alternative for a eternity
         printf "%s\n" "${aswFileSegmented[@]}">$answersFile
     fi
-    echo -n "" >> $answersFile
 
     echo -e "All the question have been answered\n------ Exited successfully from KBJA-asw environment ------\n"
 
@@ -210,9 +210,30 @@ repVoteEnvMod(){
     local idOfVote="$1"
 
     # Save the path to the folder inside questionFolder and verify if it exist
-    questionFolder=("$SHARED_FOLDER/Vote-$idOfVote")
+    questionFolder=("$SHARED_FOLDER_REP/Vote-$idOfVote")
     if [ ! -e "$questionFolder" ]; then
         echo -e "ERROR: Vote unavailable. Id[$idOfVote] wasn't found\n"
+        return
+    fi
+
+    logFile=("$questionFolder/Info.log")
+    
+    mapfile -t logFileSegmented < "$logFile"
+    sizeOfFileArray="${#logFileSegmented[@]}"
+    cursor=0
+    
+    while (( $cursor < $sizeOfFileArray )); do
+        currLine=$(echo "${logFileSegmented[$cursor]}")
+        if echo "$currLine" | grep -Eq 'Expiration date:.*'; then
+            expDate=$(echo "$currLine" | awk -F ' ' '{print $3}')
+            # echo "Found expDate:$expDate"
+            break
+        fi
+        cursor=$((cursor + 1))
+    done
+
+    if [[ $(date +%d-%m-%Y) > $expDate ]]; then
+        echo -e "ERROR: Vote has expired. It was available until $expDate midnight.\n"
         return
     fi
 
